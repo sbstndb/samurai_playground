@@ -64,6 +64,12 @@ int main(int argc, char* argv[])
     std::vector<double> b_vector(size, 1.0) ;
     std::vector<double> y_vector(size, 1.0) ;    
 
+    // allocate raw pointers
+    double* d_x = (double*)malloc(size * sizeof(double)) ; 
+    double* d_b = (double*)malloc(size * sizeof(double)) ;
+    double* d_y = (double*)malloc(size * sizeof(double)) ;
+    
+
     // init samurai fields
     samurai::for_each_cell(mesh,
                            [&](auto& cell)
@@ -72,6 +78,13 @@ int main(int argc, char* argv[])
 			       b[cell] = 1.0;
 			       y[cell] = 1.0;
                            });
+
+    // init raw pointer
+    for (int i = 0 ; i < size ; i++){
+	d_x[i] = 1.0 ; 
+	d_b[i] = 1.0 ; 
+	d_y[i] = 1.0 ; 
+    }	
 
     // compute samurai 
     auto start_samurai = std::chrono::high_resolution_clock::now() ; 
@@ -98,9 +111,33 @@ int main(int argc, char* argv[])
     auto duration_vector = end_vector - start_vector;
 
 
-    std::cout << " Time for Samurai : " << duration_samurai.count() << std::endl ; 
-    std::cout << " Time for Xtensor : " << duration_xtensor.count() << std::endl ;
-    std::cout << " Time for Vector  : " << duration_vector.count() << std::endl ;
+    // compute raw pointer
+    auto start_raw = std::chrono::high_resolution_clock::now() ;
+    for (int i = 0 ; i < size ; i++){
+            d_y[i] = a * d_x[i] + d_b[i] ;
+    }
+    auto end_raw = std::chrono::high_resolution_clock::now() ;
+    auto duration_raw = end_raw - start_raw;
+
+    
+        // verif + avoid automatic code deletion
+    std::cout << " Result of the last cell : " << std::endl ;
+    std::cout << " -- Samurai : "       << std::endl ;
+    std::cout << " -- Xtensor : "       << y_tensor[size-1]     << std::endl ;
+    std::cout << " -- C++ vector : "    << y_vector[size-1]     << std::endl ;
+    std::cout << " -- Raw pointer : "   << d_y[size-1]          << std::endl ;
+
+
+
+    free(d_x) ; 
+    free(d_b) ; 
+    free(d_y) ; 
+
+
+    std::cout << " Time for Samurai : " << duration_samurai.count() 	<< std::endl ; 
+    std::cout << " Time for Xtensor : " << duration_xtensor.count() 	<< std::endl ;
+    std::cout << " Time for Vector  : " << duration_vector.count() 	<< std::endl ;
+    std::cout << " Time for Raw p.  : " << duration_raw.count() 	<< std::endl ;
 	
     samurai::finalize();
     return 0;
