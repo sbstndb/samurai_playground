@@ -11,6 +11,8 @@
 #include "xtensor/xarray.hpp"
 #include "xtensor/xmath.hpp"
 
+#include <Eigen/Dense>
+
 
 #include <chrono>
 
@@ -36,7 +38,8 @@ int main(int argc, char* argv[])
     double right_box = 1;
 
     //min_level == max_level in this example
-    std::size_t level = 10;
+//    std::size_t level = 10;
+    std::size_t level = 8 ; 
 
     double a = 2.0 ; 
 
@@ -69,7 +72,11 @@ int main(int argc, char* argv[])
     double* d_b = (double*)malloc(size * sizeof(double)) ;
     double* d_y = (double*)malloc(size * sizeof(double)) ;
     
-
+    // allocate eigen arrays
+    Eigen::VectorXd x_eigen(size) ; 
+    Eigen::VectorXd b_eigen(size) ;
+    Eigen::VectorXd y_eigen(size) ;
+    
     // init samurai fields
     samurai::for_each_cell(mesh,
                            [&](auto& cell)
@@ -85,6 +92,11 @@ int main(int argc, char* argv[])
 	d_b[i] = 1.0 ; 
 	d_y[i] = 1.0 ; 
     }	
+
+    // init eigen 
+    x_eigen.setOnes() ; 
+    b_eigen.setOnes() ; 
+    y_eigen.setOnes() ; 
 
     // compute samurai 
     auto start_samurai = std::chrono::high_resolution_clock::now() ; 
@@ -120,24 +132,32 @@ int main(int argc, char* argv[])
     auto duration_raw = end_raw - start_raw;
 
     
-        // verif + avoid automatic code deletion
+    // compute Eigen vector
+    auto start_eigen = std::chrono::high_resolution_clock::now() ;
+    for (int i = 0 ; i < size ; i++){
+//            y = a * x + b ;
+    }
+    auto end_eigen = std::chrono::high_resolution_clock::now() ;
+    auto duration_eigen = end_eigen - start_eigen;
+
+    // verif + avoid automatic code deletion
     std::cout << " Result of the last cell : " << std::endl ;
     std::cout << " -- Samurai : "       << std::endl ;
     std::cout << " -- Xtensor : "       << y_tensor[size-1]     << std::endl ;
     std::cout << " -- C++ vector : "    << y_vector[size-1]     << std::endl ;
     std::cout << " -- Raw pointer : "   << d_y[size-1]          << std::endl ;
-
-
+  //  std::cout << " -- Eigen vector: "   << y_eigen[size-1]	<< std::endl ;
 
     free(d_x) ; 
     free(d_b) ; 
     free(d_y) ; 
 
-
     std::cout << " Time for Samurai : " << duration_samurai.count() 	<< std::endl ; 
     std::cout << " Time for Xtensor : " << duration_xtensor.count() 	<< std::endl ;
     std::cout << " Time for Vector  : " << duration_vector.count() 	<< std::endl ;
     std::cout << " Time for Raw p.  : " << duration_raw.count() 	<< std::endl ;
+//    std::cout << " Time for Eigen v.: " << duration_eigen.count() 	<< std::endl ;
+    
 	
     samurai::finalize();
     return 0;
