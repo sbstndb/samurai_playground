@@ -44,6 +44,24 @@ template <typename T>
 	y_tensor = xt::eval(a * x_tensor + b_tensor) ;
 }
 
+
+template <typename T>
+[[gnu::noinline]] void compute_xtensor_loop(T& y_tensor,
+                        double a,
+                        T& x_tensor,
+                        T& b_tensor,
+                        std::size_t size
+                ){
+
+	for (int i = 0 ; i < size ; i++){
+		y_tensor(i) = a * x_tensor(i) + b_tensor(i) ; 
+	}	
+
+}
+
+
+
+
 [[gnu::noinline]] void compute_stdvector(std::vector<double>& y_vector, 
 			double a, 
 			std::vector<double>& x_vector, 
@@ -103,7 +121,7 @@ int main(int argc, char* argv[])
 //    auto x_tensor = xt::ones<double>({size}) ; 
 //    auto b_tensor = xt::ones<double>({size}) ;
 //  !!!!!! i found that use auto is dangerous and can leads to unvectorized code
-    xt::xarray<double> x_tensor, b_tensor, y_tensor ; 
+    xt::xtensor<double,1> x_tensor, b_tensor, y_tensor ; 
     x_tensor = xt::ones<double>({size}) ; 
     b_tensor = xt::ones<double>({size}) ;
     y_tensor = xt::ones<double>({size}) ;
@@ -142,11 +160,20 @@ int main(int argc, char* argv[])
     auto end_samurai = std::chrono::high_resolution_clock::now() ;
     auto duration_samurai = end_samurai - start_samurai;
     
+
+    // compute xtensor_loop
+    auto start_xtensor_loop = std::chrono::high_resolution_clock::now() ;
+    compute_xtensor_loop(y_tensor, a, x_tensor, b_tensor, size);
+    auto end_xtensor_loop = std::chrono::high_resolution_clock::now() ;
+    auto duration_xtensor_loop = end_xtensor_loop - start_xtensor_loop;
+
+
     // compute xtensor
     auto start_xtensor = std::chrono::high_resolution_clock::now() ;
     compute_xtensor(y_tensor, a, x_tensor, b_tensor, size);
     auto end_xtensor = std::chrono::high_resolution_clock::now() ;
     auto duration_xtensor = end_xtensor - start_xtensor;
+
 
     // compute c++ vector
     auto start_vector = std::chrono::high_resolution_clock::now() ;
@@ -174,10 +201,11 @@ int main(int argc, char* argv[])
     free(d_b) ; 
     free(d_y) ; 
 
-    std::cout << " Time for Samurai : " << duration_samurai.count() 	<< std::endl ; 
-    std::cout << " Time for Xtensor : " << duration_xtensor.count() 	<< std::endl ;
-    std::cout << " Time for Vector  : " << duration_vector.count() 	<< std::endl ;
-    std::cout << " Time for Raw p.  : " << duration_raw.count() 	<< std::endl ;
+    std::cout << " Time for Samurai      : " << duration_samurai.count() 	<< std::endl ; 
+    std::cout << " Time for Xtensor      : " << duration_xtensor.count() 	<< std::endl ;
+    std::cout << " Time for Xtensor/loops: " << duration_xtensor_loop.count()   << std::endl ;    
+    std::cout << " Time for Vector       : " << duration_vector.count() 	<< std::endl ;
+    std::cout << " Time for Raw p.       : " << duration_raw.count() 		<< std::endl ;
     
 	
     samurai::finalize();
