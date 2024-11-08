@@ -11,13 +11,55 @@
 #include "xtensor/xarray.hpp"
 #include "xtensor/xmath.hpp"
 
-#include <Eigen/Dense>
 
 
 #include <chrono>
 
 #include <filesystem>
 namespace fs = std::filesystem;
+
+template <typename T, typename M>
+[[gnu::noinline]] void compute_samurai(
+		T& y, 
+		double a, 
+		T& x, 
+		T& b,
+		M& mesh,
+		std::size_t size
+		){
+    samurai::for_each_cell(mesh,
+                           [&](auto& cell)
+                           {
+                               y[cell] = a * x[cell] + b[cell] ;
+                           });
+}
+
+template <typename T, typename T2>
+[[gnu::noinline]] void compute_xtensor(T& y_tensor,
+			double a, 
+			T2& x_tensor, 
+			T2& b_tensor,
+			std::size_t size
+		){
+    y_tensor = xt::eval(a * x_tensor + b_tensor) ;
+}
+
+[[gnu::noinline]] void compute_stdvector(std::vector<double>& y_vector, 
+			double a, 
+			std::vector<double>& x_vector, 
+			std::vector<double>& b_vector, 
+			std::size_t size){
+    for (int i = 0 ; i < size ; i++){
+            y_vector[i] = a * x_vector[i] + b_vector[i] ;
+    }
+}
+
+[[gnu::noinline]] void compute_raw(double* d_y, double a, double *d_x, double *d_b, std::size_t size ){
+    for (int i = 0 ; i < size ; i++){
+            d_y[i] = a * d_x[i] + d_b[i] ;
+
+    }
+}
 
 
 
@@ -39,7 +81,7 @@ int main(int argc, char* argv[])
 
     //min_level == max_level in this example
 //    std::size_t level = 10;
-    std::size_t level = 8 ; 
+    std::size_t level = 11 ; 
 
     double a = 2.0 ; 
 
@@ -72,10 +114,6 @@ int main(int argc, char* argv[])
     double* d_b = (double*)malloc(size * sizeof(double)) ;
     double* d_y = (double*)malloc(size * sizeof(double)) ;
     
-    // allocate eigen arrays
-    Eigen::VectorXd x_eigen(size) ; 
-    Eigen::VectorXd b_eigen(size) ;
-    Eigen::VectorXd y_eigen(size) ;
     
     // init samurai fields
     samurai::for_each_cell(mesh,
@@ -93,52 +131,33 @@ int main(int argc, char* argv[])
 	d_y[i] = 1.0 ; 
     }	
 
-    // init eigen 
-    x_eigen.setOnes() ; 
-    b_eigen.setOnes() ; 
-    y_eigen.setOnes() ; 
 
     // compute samurai 
     auto start_samurai = std::chrono::high_resolution_clock::now() ; 
-    samurai::for_each_cell(mesh,
-                           [&](auto& cell)
-                           {
-                               y[cell] = a * x[cell] + b[cell] ; 
-                           });
+    compute_samurai(y, a, x, b,  mesh, size);
     auto end_samurai = std::chrono::high_resolution_clock::now() ;
     auto duration_samurai = end_samurai - start_samurai;
     
     // compute xtensor
     auto start_xtensor = std::chrono::high_resolution_clock::now() ;
-    y_tensor = xt::eval(a * x_tensor + b_tensor) ; 
+    compute_xtensor(y_tensor, a, x_tensor, b_tensor, size);
     auto end_xtensor = std::chrono::high_resolution_clock::now() ;
     auto duration_xtensor = end_xtensor - start_xtensor;
 
     // compute c++ vector
     auto start_vector = std::chrono::high_resolution_clock::now() ;
-    for (int i = 0 ; i < size ; i++){
-	    y_vector[i] = a * x_vector[i] + b_vector[i] ;
-    }
+    compute_stdvector(y_vector, a, x_vector, b_vector, size);
     auto end_vector = std::chrono::high_resolution_clock::now() ;
     auto duration_vector = end_vector - start_vector;
 
 
     // compute raw pointer
     auto start_raw = std::chrono::high_resolution_clock::now() ;
-    for (int i = 0 ; i < size ; i++){
-            d_y[i] = a * d_x[i] + d_b[i] ;
-    }
+    compute_raw(d_y, a, d_x, d_b, size);
     auto end_raw = std::chrono::high_resolution_clock::now() ;
     auto duration_raw = end_raw - start_raw;
 
     
-    // compute Eigen vector
-    auto start_eigen = std::chrono::high_resolution_clock::now() ;
-    for (int i = 0 ; i < size ; i++){
-//            y = a * x + b ;
-    }
-    auto end_eigen = std::chrono::high_resolution_clock::now() ;
-    auto duration_eigen = end_eigen - start_eigen;
 
     // verif + avoid automatic code deletion
     std::cout << " Result of the last cell : " << std::endl ;
@@ -146,7 +165,6 @@ int main(int argc, char* argv[])
     std::cout << " -- Xtensor : "       << y_tensor[size-1]     << std::endl ;
     std::cout << " -- C++ vector : "    << y_vector[size-1]     << std::endl ;
     std::cout << " -- Raw pointer : "   << d_y[size-1]          << std::endl ;
-  //  std::cout << " -- Eigen vector: "   << y_eigen[size-1]	<< std::endl ;
 
     free(d_x) ; 
     free(d_b) ; 
@@ -156,7 +174,6 @@ int main(int argc, char* argv[])
     std::cout << " Time for Xtensor : " << duration_xtensor.count() 	<< std::endl ;
     std::cout << " Time for Vector  : " << duration_vector.count() 	<< std::endl ;
     std::cout << " Time for Raw p.  : " << duration_raw.count() 	<< std::endl ;
-//    std::cout << " Time for Eigen v.: " << duration_eigen.count() 	<< std::endl ;
     
 	
     samurai::finalize();
