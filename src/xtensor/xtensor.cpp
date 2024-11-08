@@ -92,6 +92,14 @@ void adapting_c(){
 	free(data) ; 
 }
 
+void smart_pointer(){
+	std::shared_ptr<double> sptr(new double[8], std::default_delete<double[]>());
+	sptr.get()[2] = 321.0;
+	auto xptr = xt::adapt_smart_ptr(sptr, {4,2});
+	xptr(1,3) = 123.0 ;
+	std::cout << "Xptr : " << xptr << std::endl ; 
+}
+
 
 
 int main(){
@@ -104,4 +112,7 @@ int main(){
 	run_compile_time();
 	adapting_std() ; 
 	adapting_c() ;
+	smart_pointer() ; 
+
+
 }

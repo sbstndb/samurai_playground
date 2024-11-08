@@ -10,7 +10,7 @@ add_executable(vector_add_samurai_soa add_samurai_soa.cpp)
 target_link_libraries(vector_add PRIVATE samurai::samurai samurai::libdeps xtensor)
 
 target_link_libraries(vector_add_samurai PRIVATE samurai::samurai samurai::libdeps xtensor)
-target_link_libraries(vector_add_xtensor PRIVATE samurai::samurai samurai::libdeps xtensor)
+target_link_libraries(vector_add_xtensor PRIVATE samurai::samurai samurai::libdeps xtensor xtensor::use_xsimd xtensor::optimize)
 target_link_libraries(vector_add_vector PRIVATE samurai::samurai samurai::libdeps xtensor)
 target_link_libraries(vector_add_raw PRIVATE samurai::samurai samurai::libdeps xtensor)
 target_link_libraries(vector_add_samurai_soa PRIVATE samurai::samurai samurai::libdeps xtensor)
