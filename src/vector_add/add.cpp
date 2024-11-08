@@ -34,14 +34,14 @@ template <typename T, typename M>
                            });
 }
 
-template <typename T, typename T2>
+template <typename T>
 [[gnu::noinline]] void compute_xtensor(T& y_tensor,
 			double a, 
-			T2& x_tensor, 
-			T2& b_tensor,
+			T& x_tensor, 
+			T& b_tensor,
 			std::size_t size
 		){
-    y_tensor = xt::eval(a * x_tensor + b_tensor) ;
+	y_tensor = xt::eval(a * x_tensor + b_tensor) ;
 }
 
 [[gnu::noinline]] void compute_stdvector(std::vector<double>& y_vector, 
@@ -100,9 +100,13 @@ int main(int argc, char* argv[])
     auto y = samurai::make_field<double, 1>("y", mesh);
 
     // allocate xtensor vectors
-    auto x_tensor = xt::ones<double>({size}) ; 
-    auto b_tensor = xt::ones<double>({size}) ;
-    xt::xarray<double> y_tensor = xt::ones<double>({size}) ;
+//    auto x_tensor = xt::ones<double>({size}) ; 
+//    auto b_tensor = xt::ones<double>({size}) ;
+//  !!!!!! i found that use auto is dangerous and can leads to unvectorized code
+    xt::xarray<double> x_tensor, b_tensor, y_tensor ; 
+    x_tensor = xt::ones<double>({size}) ; 
+    b_tensor = xt::ones<double>({size}) ;
+    y_tensor = xt::ones<double>({size}) ;
 
     // allocate c++ vectors
     std::vector<double> x_vector(size, 1.0); 
